@@ -169,6 +169,7 @@ class lens_info:
     def __init__(self):
         self.manufacturer = ''
         self.name = ''
+        self.camera_model = ''
         self.focal_length = 0
         self.fnumber = 0
         self.focus_distance = 0
@@ -187,12 +188,19 @@ class lens_info:
         exif_focal_length = subprocess.check_output(
             ["exiv2", "-K", "Exif.Photo.FocalLength", "-P", "v", filename])
         self.focal_length = str_to_float(str(exif_focal_length)[2:-3])
+
         exif_fnumber = subprocess.check_output(
             ["exiv2", "-K", "Exif.Photo.FNumber", "-P", "v", filename])
         self.fnumber = str_to_float(str(exif_fnumber)[2:-3])
+
         exif_name = subprocess.check_output(
             ["exiv2", "-K", "Exif.Photo.LensModel", "-P", "v", filename])
         self.name = str(exif_name)[2:-3]
+
+        exif_camera_model = subprocess.check_output(
+            ["exiv2", "-K", "Exif.Image.Model", "-P", "v", filename])
+        self.camera_model = str(exif_camera_model)[2:-3]
+
         exif_focus_distance = subprocess.check_output(
             ["exiv2", "-K", "Exif.Sony2Fp.FocusPosition2", "-P", "v", filename])
         tmp_distance = str_to_float(str(exif_focus_distance)[2:-3])
@@ -201,21 +209,26 @@ class lens_info:
         focal_length_35mm = str_to_float(str(exif_focal_length_35mm)[2:-3])
         self.focus_distance = (pow(2, tmp_distance / 16 - 5) + 1) * focal_length_35mm / 1000  # taken from darktable
         # should be checked. Same distance as darktable shows, but these seem so be wrong (at least on zoom lenses)
+
         exif_focal_length = subprocess.check_output(
             ["exiv2", "-K", "Exif.Photo.FocalLength", "-P", "v", filename])
         focal_length = str_to_float(str(exif_focal_length)[2:-3])
         self.crop = focal_length_35mm / focal_length
+
         exif_corr_distortion = subprocess.check_output(
             ["exiv2", "-K", "Exif.SubImage1.DistortionCorrParams", "-P", "v", filename])
         self.corr_distortion_raw = str_to_nparray_l(str(exif_corr_distortion)[2:-3])
+
         exif_corr_vignetting = subprocess.check_output(
             ["exiv2", "-K", "Exif.SubImage1.VignettingCorrParams", "-P", "v", filename])
         self.corr_vignetting_raw = str_to_nparray_l(str(exif_corr_vignetting)[2:-3])
+
         exif_corr_tca = subprocess.check_output(
             ["exiv2", "-K", "Exif.SubImage1.ChromaticAberrationCorrParams", "-P", "v", filename])
         tmp_tca = str_to_nparray_l(str(exif_corr_tca)[2:-3])
         self.corr_tca_r_raw = tmp_tca[0:(tmp_tca.shape[0] // 2)]
         self.corr_tca_b_raw = tmp_tca[(tmp_tca.shape[0] // 2):]
+
         self.corr_distortion = calc_distortion(self.corr_distortion_raw)
         self.corr_tca_r = calc_tca(self.corr_tca_r_raw)
         self.corr_tca_b = calc_tca(self.corr_tca_b_raw)
@@ -278,6 +291,7 @@ def to_lf_head(lens_mod: lens_info):
     out += indent(2) + '<mount>' + lens_mod.mount + '</mount>\n'
     out += indent(2) + '<cropfactor>' + str(lens_mod.crop) + '</cropfactor>\n'
     out += indent(2) + '<calibration>\n'
+    out += indent(3) + '<!-- Taken with ' + lens_mod.camera_model + ', coeffients fitted from exif data by lf_fitexif_se -->\n'
     return out
 
 
