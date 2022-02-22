@@ -242,44 +242,44 @@ class lens_info:
 
 
 def indent(depth):
-    return ''.ljust(4*depth)
+    return ' ' * (4*depth)
 
 
 def to_lf_distortion(lens_mod: lens_info):
     out = indent(3)
-    out += '<distortion model="ptlens" focal="'
-    out += str(int(round(lens_mod.focal_length)))
-    out += '" a="' + str(lens_mod.corr_distortion[0])
-    out += '" b="' + str(lens_mod.corr_distortion[1])
-    out += '" c="' + str(lens_mod.corr_distortion[2])
-    out += '" />\n'
+    out += '<distortion model="ptlens" '
+    out += 'focal="{:.0f}" '.format(lens_mod.focal_length)
+    out += 'a="{:.7f}" '.format(lens_mod.corr_distortion[0])
+    out += 'b="{:.7f}" '.format(lens_mod.corr_distortion[1])
+    out += 'c="{:.7f}" '.format(lens_mod.corr_distortion[2])
+    out += '/>\n'
     return out
 
 
 def to_lf_tca(lens_mod: lens_info):
     out = indent(3)
-    out += '<tca model="poly3" focal="'
-    out += str(int(round(lens_mod.focal_length)))
-    out += '" vr="' + str(lens_mod.corr_tca_r[0])
-    out += '" cr="' + str(lens_mod.corr_tca_r[1])
-    out += '" br="' + str(lens_mod.corr_tca_r[2])
-    out += '" vb="' + str(lens_mod.corr_tca_b[0])
-    out += '" cb="' + str(lens_mod.corr_tca_b[1])
-    out += '" bb="' + str(lens_mod.corr_tca_b[2])
-    out += '" />\n'
+    out += '<tca model="poly3" '
+    out += 'focal="{:.0f}" '.format(lens_mod.focal_length)
+    out += 'vr="{:.7f}" '.format(lens_mod.corr_tca_r[0])
+    out += 'cr="{:.7f}" '.format(lens_mod.corr_tca_r[1])
+    out += 'br="{:.7f}" '.format(lens_mod.corr_tca_r[2])
+    out += 'vb="{:.7f}" '.format(lens_mod.corr_tca_b[0])
+    out += 'cb="{:.7f}" '.format(lens_mod.corr_tca_b[1])
+    out += 'bb="{:.7f}" '.format(lens_mod.corr_tca_b[2])
+    out += '/>\n'
     return out
 
 
 def to_lf_vignetting(lens_mod: lens_info):
     out = indent(3)
-    out += '<vignetting model="pa" focal="'
-    out += str(int(round(lens_mod.focal_length)))
-    out += '" aperture="' + str(lens_mod.fnumber)
-    out += '" distance="' + str(lens_mod.focus_distance)
-    out += '" k1="' + str(lens_mod.corr_vignetting[0])
-    out += '" k2="' + str(lens_mod.corr_vignetting[1])
-    out += '" k3="' + str(lens_mod.corr_vignetting[2])
-    out += '" />\n'
+    out += '<vignetting model="pa" '
+    out += 'focal="{:.0f}" '.format(lens_mod.focal_length)
+    out += 'aperture="{:.1f}" '.format(lens_mod.fnumber)
+    out += 'distance="{:.2f}" '.format(lens_mod.focus_distance)
+    out += 'k1="{:.7f}" '.format(lens_mod.corr_vignetting[0])
+    out += 'k2="{:.7f}" '.format(lens_mod.corr_vignetting[1])
+    out += 'k3="{:.7f}" '.format(lens_mod.corr_vignetting[2])
+    out += '/>\n'
     return out
 
 
@@ -312,7 +312,7 @@ is_data = False
 
 # Distortion:
 
-file_list = glob.glob('distortion/*.ARW')
+file_list = glob.glob('distortion/*.[aA][rR][wW]')
 file_list.sort()
 out_dist = ''
 
@@ -323,7 +323,7 @@ for i in range(len(file_list)):
 
 # TCA:
 
-file_list = glob.glob('tca/*.ARW')
+file_list = glob.glob('tca/*.[aA][rR][wW]')
 file_list.sort()
 out_tca = ''
 
@@ -334,7 +334,7 @@ for i in range(len(file_list)):
 
 # Vignetting:
 
-file_list = glob.glob('vignetting/*.ARW')
+file_list = glob.glob('vignetting/*.[aA][rR][wW]')
 file_list.sort()
 out_vignetting = ''
 
