@@ -19,12 +19,12 @@ def str_to_nparray_l(string):
     return tmp_array
 
 
-def calc_distortion(fy_orig):
+def calc_distortion(fy_orig, x_crop_scale=1.0):
     fy = fy_orig / pow(2, 14) + 1
     n = fy_orig.shape[0]
 
-    x_orig = (np.array(range(n)) + 1) / n
-    xscale = np.sqrt(2 * 2 + 3 * 3) / 2
+    x_orig = ((np.array(range(n)) + 1) / n)   # 11/16*1.5
+    xscale = np.sqrt(2 * 2 + 3 * 3) / 2 * x_crop_scale
     x = x_orig * xscale
 
     y_scale = 1  # initial guess
@@ -71,13 +71,13 @@ def calc_distortion(fy_orig):
     return coeffs
 
 
-def calc_vignetting(v_orig):
+def calc_vignetting(v_orig, x_crop_scale=1.0):
     y = (pow(2, 14) - v_orig) / pow(2, 14)
     n = v_orig.shape[0]
 
     x_orig = (np.array(range(n)) + 1) / n
     xscale = 1
-    x = x_orig * xscale
+    x = x_orig * xscale * x_crop_scale
 
     sx2 = np.sum(np.power(x, 2))
     sx4 = np.sum(np.power(x, 4))
@@ -106,12 +106,12 @@ def calc_vignetting(v_orig):
     return coeffs
 
 
-def calc_tca(fy_orig):
+def calc_tca(fy_orig, x_crop_scale=1.0):
     n = fy_orig.shape[0]
     fy = fy_orig / pow(2, 14 + 7) + 1
 
     x_orig = (np.array(range(n)) + 1) / n
-    xscale = np.sqrt(2 * 2 + 3 * 3) / 2
+    xscale = np.sqrt(2 * 2 + 3 * 3) / 2 * x_crop_scale
     x = x_orig * xscale
 
     x = x
@@ -175,6 +175,7 @@ class lens_info:
         self.focus_distance = 0
         self.mount = ''
         self.crop = 1.0
+        self.x_crop_scale = 1.0
         self.corr_distortion_raw = np.array([0])
         self.corr_tca_r_raw = np.array([0])
         self.corr_tca_b_raw = np.array([0])
@@ -229,10 +230,16 @@ class lens_info:
         self.corr_tca_r_raw = tmp_tca[0:(tmp_tca.shape[0] // 2)]
         self.corr_tca_b_raw = tmp_tca[(tmp_tca.shape[0] // 2):]
 
-        self.corr_distortion = calc_distortion(self.corr_distortion_raw)
-        self.corr_tca_r = calc_tca(self.corr_tca_r_raw)
-        self.corr_tca_b = calc_tca(self.corr_tca_b_raw)
-        self.corr_vignetting = calc_vignetting(self.corr_vignetting_raw)
+        # The 11 coefficients in APS-C mode are equal to the first 11 coefficients in full-frame mod
+        # -> not exactly crop 1.5 in coefficient position (x_crop_scale)
+        x_crop_scale = self.corr_distortion_raw.shape[0]/16 * self.crop
+        self.corr_distortion = calc_distortion(self.corr_distortion_raw, x_crop_scale)
+        x_crop_scale = self.corr_tca_r_raw.shape[0] / 16 * self.crop
+        self.corr_tca_r = calc_tca(self.corr_tca_r_raw, x_crop_scale)
+        x_crop_scale = self.corr_tca_b_raw.shape[0] / 16 * self.crop
+        self.corr_tca_b = calc_tca(self.corr_tca_b_raw, x_crop_scale)
+        x_crop_scale = self.corr_vignetting_raw.shape[0] / 16 * self.crop
+        self.corr_vignetting = calc_vignetting(self.corr_vignetting_raw, x_crop_scale)
 
     def set_manufacturer(self, manufacturer):
         self.manufacturer = manufacturer
