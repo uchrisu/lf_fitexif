@@ -23,7 +23,7 @@ def calc_distortion(fy_orig, x_crop_scale=1.0):
     fy = fy_orig / pow(2, 14) + 1
     n = fy_orig.shape[0]
 
-    x_orig = ((np.array(range(n)) + 1) / n)   # 11/16*1.5
+    x_orig = (np.array(range(n)) + 0.5) / (n-1) 
     xscale = np.sqrt(2 * 2 + 3 * 3) / 2 * x_crop_scale
     x = x_orig * xscale
 
@@ -75,7 +75,7 @@ def calc_vignetting(v_orig, x_crop_scale=1.0):
     y = (pow(2, 14) - v_orig) / pow(2, 14)
     n = v_orig.shape[0]
 
-    x_orig = (np.array(range(n)) + 1) / n
+    x_orig = (np.array(range(n)) + 0.5) / (n-1)
     xscale = 1
     x = x_orig * xscale * x_crop_scale
 
@@ -110,7 +110,7 @@ def calc_tca(fy_orig, x_crop_scale=1.0):
     n = fy_orig.shape[0]
     fy = fy_orig / pow(2, 14 + 7) + 1
 
-    x_orig = (np.array(range(n)) + 1) / n
+    x_orig = (np.array(range(n)) + 0.5) / (n-1)
     xscale = np.sqrt(2 * 2 + 3 * 3) / 2 * x_crop_scale
     x = x_orig * xscale
 
