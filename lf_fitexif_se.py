@@ -23,9 +23,9 @@ def calc_distortion(fy_orig, x_crop_scale=1.0):
     fy = fy_orig / pow(2, 14) + 1
     n = fy_orig.shape[0]
 
-    x_orig = (np.array(range(n)) + 0.5) / (n-1) 
-    xscale = np.sqrt(2 * 2 + 3 * 3) / 2 * x_crop_scale
-    x = x_orig * xscale
+    x_orig = (np.array(range(n)) + 0.5) / (n-1)
+    xscale = np.sqrt(2 * 2 + 3 * 3) / 2  # half height of image is scale 1
+    x = x_orig * xscale * x_crop_scale
 
     y_scale = 1  # initial guess
     for iteration in range(5):
@@ -76,7 +76,7 @@ def calc_vignetting(v_orig, x_crop_scale=1.0):
     n = v_orig.shape[0]
 
     x_orig = (np.array(range(n)) + 0.5) / (n-1)
-    xscale = 1
+    xscale = 1  # half diagonal of image is scale 1
     x = x_orig * xscale * x_crop_scale
 
     sx2 = np.sum(np.power(x, 2))
@@ -111,8 +111,8 @@ def calc_tca(fy_orig, x_crop_scale=1.0):
     fy = fy_orig / pow(2, 14 + 7) + 1
 
     x_orig = (np.array(range(n)) + 0.5) / (n-1)
-    xscale = np.sqrt(2 * 2 + 3 * 3) / 2 * x_crop_scale
-    x = x_orig * xscale
+    xscale = np.sqrt(2 * 2 + 3 * 3) / 2  # half height of image is scale 1
+    x = x_orig * xscale * x_crop_scale
 
     x = x
     y = x * fy
@@ -230,15 +230,42 @@ class lens_info:
         self.corr_tca_r_raw = tmp_tca[0:(tmp_tca.shape[0] // 2)]
         self.corr_tca_b_raw = tmp_tca[(tmp_tca.shape[0] // 2):]
 
-        # The 11 coefficients in APS-C mode are equal to the first 11 coefficients in full-frame mod
-        # -> not exactly crop 1.5 in coefficient position (x_crop_scale)
-        x_crop_scale = self.corr_distortion_raw.shape[0]/16 * self.crop
+        # I found that the 11 coefficients in APS-C mode are equal to the first 11 coefficients of the 16 coefficients
+        # in full-frame mode.
+        # The distance between (full-frame) support points is sqrt(12mm^2 + 18mm^2)/15 = d_ff/15 with d_ff being half
+        # the diagonal of the full frame sensor. (See calculation in calc_* functions for details).
+        # This is a physical quantity and can not change in APS-C mode (if the coefficients are placed at the same
+        # physical position on the sensor - what I assume since they are equal). For vignetting half the diagonal of
+        # the image is r=1. Thus, the spacing between the support points is dr_ff = 1/15. For tca and distortion r=1 is
+        # half the image height and an additional scaling factor has to be multiplied (just as a reminder - this factor
+        # will be the same in APS-C mode).
+        # When it comes to APS-C mode, the physical size of the (half) diagonal is d_crop = d_ff/crop.
+        # In the crop mode we only have 11 coefficients. The 10 equal distant spacings between them are in the real
+        # physical world equal (d_ff/15). In relation to half the crop image diagonal d_crop we get
+        # d_ff/15 = d_crop*crop/15 = d_crop/10 * ((10*crop)/15).
+        # Thus the spacing dr_crop is not exactly 1/10 (in relative image half diagonal coordinates) but 1/10 multiplied
+        # by x_crop_scale = ((10*crop)/15), thus, dr_crop = 1/10 * x_crop_scale.
+        # In case of crop = 1.5 the factor x_crop_scale would be 1. However, Sony APS-C mode has a crop factor of
+        # about 1.524 which is addressed by x_crop_scale.
+        #
+        # One short note: Using my Sony A7 III (3.00) in APS-C mode I found that Sony is doing the opposite. Instead of
+        # multiplying with x_crop_scale Sony is dividing by this number. As a result images of exactly the same
+        # setting taken in APS-C and full frame mode with in-camera distortion correction can not be aligned.
+        # When multiplying with x_crop_scale, manually corrected images from both modes can be perfectly aligned.
+        #
+        # One last note: The difference is not very large (few pixels in the radius shift) and might be neglected
+
+        # check if we are in crop mode (only 11 coefficients)
+        x_crop_scale = 1.0
+        if self.corr_vignetting_raw.shape[0] == 11:
+            x_crop_scale = 1.524/1.5
+
         self.corr_distortion = calc_distortion(self.corr_distortion_raw, x_crop_scale)
-        x_crop_scale = self.corr_tca_r_raw.shape[0] / 16 * self.crop
+
         self.corr_tca_r = calc_tca(self.corr_tca_r_raw, x_crop_scale)
-        x_crop_scale = self.corr_tca_b_raw.shape[0] / 16 * self.crop
+
         self.corr_tca_b = calc_tca(self.corr_tca_b_raw, x_crop_scale)
-        x_crop_scale = self.corr_vignetting_raw.shape[0] / 16 * self.crop
+
         self.corr_vignetting = calc_vignetting(self.corr_vignetting_raw, x_crop_scale)
 
     def set_manufacturer(self, manufacturer):
@@ -358,30 +385,4 @@ if is_data:
     file_results.close()
 
 
-# test
 
-
-# pic1_info = lens_info()
-# pic1_info.set_manufacturer('Sigma')
-# pic1_info.set_mount('Sony E')
-# pic1_info.load_from_file('20190915_0002.ARW')
-# print('Manufacturer: ', pic1_info.manufacturer)
-# print('Name:', pic1_info.name)
-# print('focal length: ', pic1_info.focal_length)
-# print('F-number: ', pic1_info.fnumber)
-# print('Focus distance: ', pic1_info.focus_distance)
-
-# print('Corr. Dist: ', pic1_info.corr_distortion)
-# print('Corr. TCA-R: ', pic1_info.corr_tca_r)
-# print('Corr. TCA-B: ', pic1_info.corr_tca_b)
-# print('Corr. Vig: ', pic1_info.corr_vignetting)
-# print_coeffs_distortion(pic1_info.corr_distortion)
-# print_coeffs_tca(pic1_info.corr_tca_r, pic1_info.corr_tca_b)
-# print_coeffs_vignetting(pic1_info.corr_vignetting)
-# output = to_lf_head(pic1_info)\
-#   + to_lf_distortion(pic1_info)\
-#   + to_lf_tca(pic1_info)\
-#   + to_lf_vignetting(pic1_info)\
-#   + to_lf_foot(pic1_info)
-#
-# print(output)
